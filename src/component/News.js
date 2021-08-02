@@ -46,8 +46,12 @@ class News extends Component {
                         .getItem("newsData")
                         .then((item) => {
                             console.log('local item is ' + JSON.stringify(item));
+                            let newsData = JSON.parse(item)
                             this.setState({
-                                newsData: JSON.parse(item)
+                                newsData: JSON.parse(item),
+                                list: this.state.list.concat(newsData.slice(this.state.offset, this.state.limit)),
+                                offset: this.state.offset + 5,
+                                limit: this.state.limit + 5,
                             })
                         })
                     return true;
@@ -63,8 +67,8 @@ class News extends Component {
         });
 
         Axios.get("https://newsapi.org/v2/everything?q=tesla&from=2021-07-20&sortBy=publishedAt&apiKey=13fac2eeb3f542dba5bda1753a15bc4c")
-             .then((res) => {
-                console.warn("fetct news is ", res);
+            .then((res) => {
+                //console.warn("fetct news is ", res);
                 // alert("called");
                 let newsArray = [];
                 newsArray = res.data.articles;
@@ -198,7 +202,7 @@ class News extends Component {
 
     fetchLoadmore = () => {
         this.setState({
-            loading:true
+            loading: true
         })
         let res = this.state.newsData;
         setTimeout(() => {
@@ -206,7 +210,7 @@ class News extends Component {
                 list: this.state.list.concat(res.slice(this.state.offset, this.state.limit)),
                 offset: this.state.offset + 5,
                 limit: this.state.limit + 5,
-                loading:false
+                loading: false
             });
         }, 1500)
 
@@ -380,7 +384,7 @@ class News extends Component {
 }
 
 const styles = {
-    cardStyle:{
+    cardStyle: {
         width: "100%",
         paddingRight: 15,
         marginLeft: 5,
@@ -388,16 +392,17 @@ const styles = {
         shadowRadius: 1,
         shadowOpacity: 0.1,
         elevation: 8,
+
         shadowOffset: {
             width: 0,
             height: 0
         }
     },
-    dateStyle:{ 
-        textAlign: "right", 
-        paddingRight: 10, 
-        paddingVertical: 5, 
-        color: "red" 
+    dateStyle: {
+        textAlign: "right",
+        paddingRight: 11,
+        paddingVertical: 5,
+        color: "red"
     }
 }
 

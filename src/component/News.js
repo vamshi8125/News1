@@ -26,8 +26,9 @@ class News extends Component {
             showSearchData: false,
             list: [],
             limit: 5,
-            offset: 0,
+            offset: 1,
             showEmpty: false,
+            searchOffset: 1
         }
     }
 
@@ -47,6 +48,11 @@ class News extends Component {
                         .then((item) => {
                             console.log('local item is ' + JSON.stringify(item));
                             let newsData = JSON.parse(item)
+                            if(item.length <= 0) {
+                                this.setState({
+                                    showEmpty:true
+                                })
+                            }
                             this.setState({
                                 newsData: JSON.parse(item),
                                 list: this.state.list.concat(newsData.slice(this.state.offset, this.state.limit)),
@@ -66,9 +72,9 @@ class News extends Component {
             loading: true
         });
 
-        Axios.get("https://newsapi.org/v2/everything?q=tesla&from=2021-07-20&sortBy=publishedAt&apiKey=13fac2eeb3f542dba5bda1753a15bc4c")
+        Axios.get("https://newsapi.org/v2/everything?q=apple&pageSize=20&page=" + this.state.offset + "&sortBy=publishedAt&apiKey=aa2ed565090b43a5a40b236e76f4cd88")
             .then((res) => {
-                //console.warn("fetct news is ", res);
+                console.log("fetct news is ", res);
                 // alert("called");
                 let newsArray = [];
                 newsArray = res.data.articles;
@@ -79,21 +85,18 @@ class News extends Component {
                 }
                 this.setState({
                     loading: false,
-                    newsData: res.data.articles,
-                    list: this.state.list.concat(res.data.articles.slice(this.state.offset, this.state.limit)),
-                    offset: this.state.offset + 5,
-                    limit: this.state.limit + 5,
+                    newsData: this.state.newsData.concat(res.data.articles),
                 })
                 // console.warn("fetch list ", this.state.list);
-                AsyncStorage.setItem("newsData", JSON.stringify(newsArray))
+                AsyncStorage.setItem("newsData", JSON.stringify(this.state.newsData))
                 // console.log("res is" + JSON.stringify(res));
             })
             .catch((error) => {
                 this.setState({
                     loading: false,
-                    newsData: []
+                    // newsData: []
                 })
-                //  console.log("error is +++ ", error)
+                console.log("error is +++ ", error)
             });
 
     }
@@ -140,7 +143,6 @@ class News extends Component {
     }
 
     _openDatePicker = (value = 'startDate') => {
-        // console.log("value is", value);
         this.setState({
             selectedDateKey: value,
             showDatePicker: true,
@@ -154,65 +156,220 @@ class News extends Component {
     }
 
     _onSearchPress = () => {
-        if (new Date(this.state.startDate).getTime() > new Date(this.state.endDate).getTime()) {
-            this.setState({
-                loading: false
+        console.log("Search")
+        NetInfo
+            .fetch()
+            .then(state => {
+                let isConnected = state.isConnected;
+                if (!isConnected) {
+                    showMessage({
+                        message: "Please check your interner connection",
+                        type: "danger"
+                    });
+                    AsyncStorage
+                        .getItem("searchData")
+                        .then((item) => {
+                            console.log('on search item is ' + JSON.parse(item));
+                            let searchNewsData = JSON.parse(item)
+                            this.setState({
+                                showSearchData: false,
+                                searchNewsData: searchNewsData,
+                            })
+                            if (this.state.startDate == "" && this.state.endDate == "") {
+                                showMessage({
+                                    message: "Please select start date and end date",
+                                    type: "danger"
+                                })
+                                return;
+                            }
+                            if (this.state.startDate == "") {
+                                showMessage({
+                                    message: "Please select start date",
+                                    type: "danger"
+                                })
+                                return;
+                            }
+                            if (this.state.endDate == "") {
+                                showMessage({
+                                    message: "Please select end date",
+                                    type: "danger"
+                                })
+                                return;
+                            }
+
+                            if (new Date(this.state.startDate).getTime() > new Date(this.state.endDate).getTime()) {
+                                this.setState({
+                                    loading: false
+                                });
+                                showMessage({
+                                    message: "Start date should less than or equal to end date",
+                                    type: 'danger'
+                                });
+                                return;
+                            }
+
+                            localNewsData = this.state.searchNewsData.filter((item1) => {
+                                  console.log("item iss }} ", item1);
+                                let newsDate = moment(item1.publishedAt).format("YYYY-MM-DD");
+                               
+                                //  moment(newsDate).format("YYYY-MM-DD");
+                                if (newsDate >= this.state.startDate && newsDate <= this.state.endDate) {
+                                    return item1;
+
+                                }
+                            })
+                            this.setState({
+                                    searchNewsData: localNewsData,
+                                    showSearchData: true
+                                })
+                            if (localNewsData.length <= 0) {
+                                this.setState({
+                                    showEmpty: true
+                                })
+                            }
+                            })
+                    return true;
+                }
+                if (this.state.startDate == "" && this.state.endDate == "") {
+                    showMessage({
+                        message: "Please select start date and end date",
+                        type: "danger"
+                    })
+                    return;
+                }
+                if (this.state.startDate == "") {
+                    showMessage({
+                        message: "Please select start date",
+                        type: "danger"
+                    })
+                    return;
+                }
+                if (this.state.endDate == "") {
+                    showMessage({
+                        message: "Please select end date",
+                        type: "danger"
+                    })
+                    return;
+                }
+
+                if (new Date(this.state.startDate).getTime() > new Date(this.state.endDate).getTime()) {
+                    this.setState({
+                        loading: false
+                    });
+                    showMessage({
+                        message: "Start date should less than or equal to end date",
+                        type: 'danger'
+                    });
+                    return;
+                }
+        
+                console.log("called");
+                this.setState({
+                    loading: true,
+                    showSearchData: true,
+                    searchNewsData:[],
+                });
+        
+                Axios.get("https://newsapi.org/v2/everything?q=apple&from=" + this.state.startDate + "&to=" + this.state.endDate + "&pageSize=20&page=" + this.state.searchOffset + "&apiKey=aa2ed565090b43a5a40b236e76f4cd88")
+                    .then((res) => {
+                        console.log(res, "search data is");
+                        console.log(this.state.startDate, "start date is");
+                        console.log(this.state.endDate, "end date is");
+                        let searchArray = [];
+                        searchArray = res.data.articles
+                        if(searchArray <= 0 ) {
+                            this.setState({
+                                showEmpty:true
+                            })
+                        }
+                        this.setState({
+        
+                            loading: false,
+                            searchNewsData: this.state.searchNewsData.concat(res.data.articles),
+                        })
+                        AsyncStorage.setItem("searchData", JSON.stringify(this.state.searchNewsData));
+                    })
+                    .catch((error) => {
+                        console.log("error is }} ",error);
+                        showMessage({
+                            message:"Something went wrong ",
+                            type:"danger"
+                        })
+                        this.setState({
+                            loading: false
+                        })
+                    })
             });
-            showMessage({
-                message: "Start date should less than or equal to end date",
-                type: 'danger'
-            });
-            return;
-        }
-        // console.log("called news Data", this.state.newsData);
-        // console.warn("called news Data", this.state.newsData);
-        let localNewsData = [];
-        let dummmy = this.state.newsData
-
-        localNewsData = dummmy.filter((item) => {
-            //  console.log("item iss }} ", item);
-            let newsDate = moment(item.publishedAt).format("YYYY-MM-DD");
-            //  moment(newsDate).format("YYYY-MM-DD");
-            if (newsDate >= this.state.startDate && newsDate <= this.state.endDate) {
-                return item;
-
-            }
-        })
-        if (localNewsData.length <= 0) {
-            this.setState({
-                showEmpty: true
-            })
-
-        }
-        this.setState({
-            searchNewsData: localNewsData,
-            showSearchData: true
-        })
-        // console.log("search news data is ", JSON.stringify(localNewsData))
-
     }
 
     _onCancelPress = () => {
-        this.setState({
-            showSearchData: false,
-            startDate: "",
-            endDate: ""
-        })
+
+        if (this.state.startDate == "" && this.state.endDate == "") {
+           
+            return;
+        }
+        if (this.state.startDate == "") {
+           
+            return;
+        }
+        if (this.state.endDate == "") {
+          
+            return;
+        }
+
+        NetInfo
+            .fetch()
+            .then(state => {
+                let isConnected = state.isConnected;
+                if (!isConnected) {
+                    showMessage({
+                        message: "Please check your interner connection",
+                        type: "danger"
+                    });
+                    AsyncStorage
+                        .getItem("newsData")
+                        .then((item) => {
+                            console.log('on cancel item is ' + JSON.stringify(item));
+                            let newsData = JSON.parse(item)
+                            this.setState({
+                                showSearchData: false,
+                                newsData: JSON.parse(item),
+                                list: this.state.list.concat(newsData.slice(this.state.offset, this.state.limit)),
+                                startDate: "",
+                                endDate: "",
+                            })
+                        })
+                    return true;
+                }
+                this.setState({
+                    showSearchData: false,
+                    startDate: "",
+                    endDate: "",
+                    searchNewsData: [],
+                })
+            });
     }
 
     fetchLoadmore = () => {
-        this.setState({
-            loading: true
+        NetInfo
+        .fetch()
+        .then((state) => {
+            let isConnected = state.isConnected;
+
+            if(!isConnected) {
+                return;
+            }
+            if (!this.state.showSearchData) {
+                this.setState({
+                    loading: true,
+                    offset: this.state.offset + 1
+                }, () => this._fetchNews())
+                return;
+            } this.setState({
+                loading: true,
+                searchOffset: this.state.searchOffset + 1
+            }, () => this._onSearchPress())
         })
-        let res = this.state.newsData;
-        setTimeout(() => {
-            this.setState({
-                list: this.state.list.concat(res.slice(this.state.offset, this.state.limit)),
-                offset: this.state.offset + 5,
-                limit: this.state.limit + 5,
-                loading: false
-            });
-        }, 1500)
 
     }
     render() {
@@ -233,10 +390,6 @@ class News extends Component {
                     textContent={"Loading"}
                     textStyle={{ color: "black" }}
                 />
-                {/* <Content
-                    style={{ flex: 1 }}
-                    contentContainerStyle={{ flex: 1 }}
-                > */}
                 <View
                     style={{
                         //flex: 1,
@@ -259,18 +412,16 @@ class News extends Component {
                             paddingVertical: 10,
                         }}
                         onPress={() => this._openDatePicker('startDate')}>
-                        <AntIcon name="calendar" type="AntDesign" style={{ color: "black", fontSize: 20 }} />
+                        <Icon name="calendar" type="AntDesign" style={{ color: "black", fontSize: 20 }} />
                         <Text style={{
                             alignSelf: 'center',
-                            //marginRight: 35,
-                            //fontFamily: (Platform.OS == 'ios') ? CONSTANTS.FONT_FAMILIES.PingFangSCMedium : CONSTANTS.FONT_FAMILIES.SFProDisplaySemibold,
                             fontSize: 15,
                             color: "black"
                         }}>
                             {
                                 (this.state.startDate == "")
-                                    ? "Start Date"
-                                    : this.state.startDate
+                                    ? " Start Date"
+                                    : " "+this.state.startDate
                             }
                         </Text>
                     </Button>
@@ -288,18 +439,16 @@ class News extends Component {
                             paddingVertical: 10,
                         }}
                         onPress={() => this._openDatePicker('endDate')}>
-                        <AntIcon name="calendar" style={{ color: "black", fontSize: 20, }} />
+                        <Icon name="calendar" type="AntDesign" style={{ color: "black", fontSize: 20, }} />
                         <Text style={{
                             alignSelf: 'center',
-                            //marginRight: 35,
-                            //fontFamily: (Platform.OS == 'ios') ? CONSTANTS.FONT_FAMILIES.PingFangSCMedium : CONSTANTS.FONT_FAMILIES.SFProDisplaySemibold,
                             fontSize: 15,
                             color: "black"
                         }}>
                             {
                                 (this.state.endDate == "")
-                                    ? "End Date"
-                                    : this.state.endDate
+                                    ? " End Date"
+                                    : " "+ this.state.endDate
                             }
                         </Text>
                     </Button>
@@ -334,7 +483,8 @@ class News extends Component {
                         extraData={this.state}
                         onEndReached={this.fetchLoadmore}
                         onEndReachedThreshold={0.1}
-                        data={(!this.state.showSearchData) ? this.state.list : this.state.searchNewsData}
+                        //  data={this.state.newsData}
+                        data={(!this.state.showSearchData) ? this.state.newsData : this.state.searchNewsData}
 
                         keyExtractor={(item, index) => index.toString()}
                         renderItem={({ item }) => {
